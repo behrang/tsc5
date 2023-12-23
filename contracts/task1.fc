@@ -16,7 +16,6 @@
     int execution_time = ds~load_uint(32);
     slice receiver = ds~load_msg_addr();
     int seqno = ds~load_uint(32);
-    ds.end_parse();
     return (public_key, execution_time, receiver, seqno);
 }
 
@@ -32,8 +31,6 @@
     slice ss = ref.begin_parse();
     int locked_for = ss~load_uint(32);
     int new_seqno = ss~load_uint(32);
-    ss.end_parse();
-    s.end_parse();
 
     throw_unless(119, new_seqno == seqno + 1);
     throw_unless(120, check_signature(ref.cell_hash(), signature, public_key));
@@ -50,7 +47,6 @@
     ( int public_key, int execution_time, slice receiver, int seqno ) = load_data();
 
     int query_id = s~load_uint(64);
-    s.end_parse();
 
     throw_unless(124, execution_time <= now());
 
