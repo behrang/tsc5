@@ -47,17 +47,21 @@ export class Task1 implements Contract {
         })
     }
 
-    async sendUpdate(provider: ContractProvider, signature: Buffer, lockedFor: bigint, newSeqno: bigint) {
+    async sendUpdate(provider: ContractProvider, queryId: bigint, signature: Buffer, lockedFor: bigint, newSeqno: bigint) {
         const message = beginCell()
             .storeUint(0x9df10277, 32)
+            .storeUint(queryId, 64)
             .storeBuffer(signature)
             .storeRef(beginCell().storeUint(lockedFor, 32).storeUint(newSeqno, 32))
             .endCell()
         await provider.external(message)
     }
 
-    async sendClaim(provider: ContractProvider) {
-        const message = beginCell().storeUint(0xbb4be234, 32).endCell()
+    async sendClaim(provider: ContractProvider, queryId: bigint) {
+        const message = beginCell()
+            .storeUint(0xbb4be234, 32)
+            .storeUint(queryId, 64)
+            .endCell()
         await provider.external(message)
     }
 

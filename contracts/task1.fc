@@ -26,6 +26,7 @@
 () update(slice s) impure {
     ( int public_key, int execution_time, slice receiver, int seqno ) = load_data();
 
+    int query_id = s~load_uint(64);
     slice signature = s~load_bits(512);
     cell ref = s~load_ref();
     slice ss = ref.begin_parse();
@@ -47,6 +48,9 @@
 
 () claim(slice s) impure {
     ( int public_key, int execution_time, slice receiver, int seqno ) = load_data();
+
+    int query_id = s~load_uint(64);
+    s.end_parse();
 
     throw_unless(124, execution_time <= now());
 

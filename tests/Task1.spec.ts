@@ -70,7 +70,7 @@ describe('Task1', () => {
         const data = beginCell().storeUint(lockedFor, 32).storeUint(newSeqno, 32).endCell().hash()
         const signature = sign(data, keyPair.secretKey)
         try {
-            await task1.sendUpdate(signature, lockedFor, newSeqno)
+            await task1.sendUpdate(0n, signature, lockedFor, newSeqno)
             fail('expected an error to be thrown')
         } catch (e: any) {
             expect(e.exitCode).toEqual(119)
@@ -85,7 +85,7 @@ describe('Task1', () => {
         const anotherKeyPair = await mnemonicToPrivateKey('another private key'.split(' '))
         const signature = sign(data, anotherKeyPair.secretKey)
         try {
-            await task1.sendUpdate(signature, lockedFor, newSeqno)
+            await task1.sendUpdate(0n, signature, lockedFor, newSeqno)
             fail('expected an error to be thrown')
         } catch (e: any) {
             expect(e.exitCode).toEqual(120)
@@ -99,7 +99,7 @@ describe('Task1', () => {
         const data = beginCell().storeUint(lockedFor, 32).storeUint(newSeqno, 32).endCell().hash()
         const signature = sign(data, keyPair.secretKey)
         try {
-            await task1.sendUpdate(signature, lockedFor, newSeqno)
+            await task1.sendUpdate(0n, signature, lockedFor, newSeqno)
             fail('expected an error to be thrown')
         } catch (e: any) {
             expect(e.exitCode).toEqual(121)
@@ -128,7 +128,7 @@ describe('Task1', () => {
         const data = beginCell().storeUint(lockedFor, 32).storeUint(newSeqno, 32).endCell().hash()
         const signature = sign(data, keyPair.secretKey)
         try {
-            await task1.sendUpdate(signature, lockedFor, newSeqno)
+            await task1.sendUpdate(0n, signature, lockedFor, newSeqno)
             fail('expected an error to be thrown')
         } catch (e: any) {
             expect(e.exitCode).toEqual(122)
@@ -142,7 +142,7 @@ describe('Task1', () => {
         const data = beginCell().storeUint(lockedFor, 32).storeUint(newSeqno, 32).endCell().hash()
         const signature = sign(data, keyPair.secretKey)
         try {
-            await task1.sendUpdate(signature, lockedFor, newSeqno)
+            await task1.sendUpdate(0n, signature, lockedFor, newSeqno)
             fail('expected an error to be thrown')
         } catch (e: any) {
             expect(e.exitCode).toEqual(123)
@@ -155,7 +155,7 @@ describe('Task1', () => {
         const lockedFor = 10n
         const data = beginCell().storeUint(lockedFor, 32).storeUint(newSeqno, 32).endCell().hash()
         const signature = sign(data, keyPair.secretKey)
-        const result = await task1.sendUpdate(signature, lockedFor, newSeqno)
+        const result = await task1.sendUpdate(0n, signature, lockedFor, newSeqno)
         expect(result.transactions).toHaveTransaction({
             to: task1.address,
             success: true,
@@ -171,7 +171,7 @@ describe('Task1', () => {
 
     it('should throw error 124', async () => {
         try {
-            await task1.sendClaim()
+            await task1.sendClaim(0n)
             fail('expected an error to be thrown')
         } catch (e: any) {
             expect(e.exitCode).toEqual(124)
@@ -194,7 +194,7 @@ describe('Task1', () => {
                 balance: toNano('10'),
             }),
         )
-        const result = await task1.sendClaim()
+        const result = await task1.sendClaim(0n)
         expect(result.transactions).toHaveTransaction({
             to: task1.address,
             success: true,
