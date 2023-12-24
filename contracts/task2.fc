@@ -1,6 +1,6 @@
 #include "imports/stdlib.fc";
 
-() save_data(slice admin_address, cell users, int total) impure {
+() save_data(slice admin_address, cell users, int total) impure inline {
     begin_cell()
         .store_slice(admin_address)
         .store_dict(users)
@@ -9,7 +9,7 @@
         .set_data();
 }
 
-(slice, cell, int) load_data() {
+(slice, cell, int) load_data() inline {
     slice ds = get_data().begin_parse();
     slice admin_address = ds~load_msg_addr();
     cell users = ds~load_dict();
@@ -20,7 +20,7 @@
     return ( admin_address, users, total );
 }
 
-() add_user(slice src, slice s) impure {
+() add_user(slice src, slice s) impure inline {
     ( slice admin_address, cell users, int total ) = load_data();
 
     int query_id = s~load_uint(64);
@@ -28,7 +28,6 @@
     int share = s~load_uint(32);
 
     throw_unless(120, equal_slice_bits(src, admin_address));
-    accept_message();
 
     ( _, int addr ) = parse_std_addr(address);
     ( slice value, int f? ) = users.udict_get?(256, addr);
@@ -41,14 +40,13 @@
     save_data(admin_address, users, total);
 }
 
-() remove_user(slice src, slice s) impure {
+() remove_user(slice src, slice s) impure inline {
     ( slice admin_address, cell users, int total ) = load_data();
 
     int query_id = s~load_uint(64);
     slice address = s~load_msg_addr();
 
     throw_unless(120, equal_slice_bits(src, admin_address));
-    accept_message();
 
     ( _, int addr ) = parse_std_addr(address);
     ( slice value, int d? ) = users~udict_delete_get?(256, addr);
@@ -58,15 +56,11 @@
     save_data(admin_address, users, total);
 }
 
-() split(slice src, slice s, int amount) impure {
+() split(slice src, slice s, int amount) impure inline {
     ( slice admin_address, cell users, int total ) = load_data();
 
-    int query_id = s~load_uint(64);
-
     throw_unless(122, ~ users.null?());
-    accept_message();
 
-    ;; todo: handle large list of users
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
@@ -82,16 +76,14 @@
     }
 }
 
-() notification(slice src, slice s) impure {
+() notification(slice src, slice s) impure inline {
     ( slice admin_address, cell users, int total ) = load_data();
 
     int query_id = s~load_uint(64);
     int amount = s~load_coins();
 
     throw_unless(122, ~ users.null?());
-    accept_message();
 
-    ;; todo: handle large list of users
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
@@ -120,18 +112,15 @@
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    slice cs = in_msg_full.begin_parse();
-    int flags = cs~load_uint(4);
-    slice src = cs~load_msg_addr();
-
-    if flags & 1 {
+    ifnot in_msg_body.slice_bits() {
         return ();
     }
 
-    int op = 0;
-    if in_msg_body.slice_bits() {
-        op = in_msg_body~load_uint(32);
-    }
+    slice cs = in_msg_full.begin_parse();
+    cs~skip_bits(4);
+    slice src = cs~load_msg_addr();
+
+    int op = in_msg_body~load_uint(32);
 
     if op == 0x368ddef3 {
         return add_user(src, in_msg_body);
@@ -158,6 +147,6 @@ cell get_users() method_id {
 int get_user_share(slice address) method_id {
     ( _, cell users, _ ) = load_data();
     ( _, int addr ) = parse_std_addr(address);
-    ( slice value, int f? ) = users.udict_get?(256, addr);
-    return f? ? value~load_uint(32) : 0;
+    ( slice value, _ ) = users.udict_get?(256, addr);
+    return value~load_uint(32);
 }
