@@ -23,11 +23,11 @@
 () add_user(slice src, slice s) impure inline {
     ( slice admin_address, cell users, int total ) = load_data();
 
+    throw_unless(120, equal_slice_bits(src, admin_address));
+
     int query_id = s~load_uint(64);
     slice address = s~load_msg_addr();
     int share = s~load_uint(32);
-
-    throw_unless(120, equal_slice_bits(src, admin_address));
 
     ( _, int addr ) = parse_std_addr(address);
     ( slice value, int f? ) = users.udict_get?(256, addr);
@@ -43,10 +43,10 @@
 () remove_user(slice src, slice s) impure inline {
     ( slice admin_address, cell users, int total ) = load_data();
 
+    throw_unless(120, equal_slice_bits(src, admin_address));
+
     int query_id = s~load_uint(64);
     slice address = s~load_msg_addr();
-
-    throw_unless(120, equal_slice_bits(src, admin_address));
 
     ( _, int addr ) = parse_std_addr(address);
     ( slice value, int d? ) = users~udict_delete_get?(256, addr);
@@ -61,12 +61,14 @@
 
     throw_if(122, users.null?());
 
+    builder b = begin_cell()
+        .store_uint(0x8400, 17); ;; 01000010000000000
+
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
         int x = muldiv(share, amount, total);
-        cell msg = begin_cell()
-            .store_uint(0x8400, 17) ;; 01000010000000000
+        cell msg = b
             .store_uint(addr, 256)
             .store_coins(x)
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
@@ -78,18 +80,26 @@
 () notification(slice src, slice s) impure inline {
     ( slice admin_address, cell users, int total ) = load_data();
 
+    throw_if(122, users.null?());
+
     int query_id = s~load_uint(64);
     int amount = s~load_coins();
 
-    throw_if(122, users.null?());
+    builder b = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(src)
+        .store_coins(20000000)
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+    builder bb = begin_cell()
+        .store_uint(0x0f8a7ea5, 32)
+        .store_uint(query_id, 64);
 
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
         int x = muldiv(share, amount, total);
-        cell transfer = begin_cell()
-            .store_uint(0x0f8a7ea5, 32)
-            .store_uint(query_id, 64)
+        cell transfer = bb
             .store_coins(x)
             .store_uint(0x400, 11)
             .store_uint(addr, 256)
@@ -97,11 +107,7 @@
             .store_uint(addr, 256)
             .store_uint(0x202, 1 + 4 + 8 + 1) ;; 00001000000010
             .end_cell();
-        cell msg = begin_cell()
-            .store_uint(0x10, 6)
-            .store_slice(src)
-            .store_coins(20000000)
-            .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        cell msg = b
             .store_ref(transfer)
             .end_cell();
         send_raw_message(msg, 1);
