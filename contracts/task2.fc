@@ -64,7 +64,7 @@
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
-        int x = muldiv(amount, share, total);
+        int x = muldiv(share, amount, total);
         cell msg = begin_cell()
             .store_uint(0x8400, 17) ;; 01000010000000000
             .store_uint(addr, 256)
@@ -86,7 +86,7 @@
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
-        int x = muldiv(amount, share, total);
+        int x = muldiv(share, amount, total);
         cell transfer = begin_cell()
             .store_uint(0x0f8a7ea5, 32)
             .store_uint(query_id, 64)
