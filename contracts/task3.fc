@@ -12,11 +12,10 @@ cell process_message(cell, int, int, cell, slice);
 
     cell expected_code = in_msg_body~load_maybe_ref();
     cell migrations = in_msg_body~load_dict();
-    cell payload = in_msg_body~load_ref();
 
     slice ds = get_data().begin_parse();
-    int current_version = ds~load_uint(32);
     cell storage = ds~load_ref();
+    int current_version = ds~load_uint(32);
 
     if current_version < expected_version {
         throw_if(200, expected_code.null?());
@@ -36,19 +35,19 @@ cell process_message(cell, int, int, cell, slice);
         set_code(expected_code);
     }
 
-    storage = process_message(storage, my_balance, msg_value, in_msg_full, payload.begin_parse());
+    storage = process_message(storage, my_balance, msg_value, in_msg_full, in_msg_body~load_ref().begin_parse());
 
     return wrap_storage(expected_version, storage).set_data();
 }
 
-cell get_storage() {
+cell get_storage() inline {
     return get_data().begin_parse().preload_ref();
 }
 
-cell wrap_storage(int version, cell storage) {
+cell wrap_storage(int version, cell storage) inline {
     return begin_cell()
-        .store_uint(version, 32)
         .store_ref(storage)
+        .store_uint(version, 32)
         .end_cell();
 }
 
