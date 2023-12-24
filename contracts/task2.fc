@@ -59,15 +59,14 @@
 () split(slice src, slice s, int amount) impure inline {
     ( slice admin_address, cell users, int total ) = load_data();
 
-    throw_unless(122, ~ users.null?());
+    throw_if(122, users.null?());
 
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
         int x = muldiv(amount, share, total);
         cell msg = begin_cell()
-            .store_uint(0x10, 6)
-            .store_uint(0x400, 11)
+            .store_uint(0x8400, 17) ;; 01000010000000000
             .store_uint(addr, 256)
             .store_coins(x)
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
@@ -82,7 +81,7 @@
     int query_id = s~load_uint(64);
     int amount = s~load_coins();
 
-    throw_unless(122, ~ users.null?());
+    throw_if(122, users.null?());
 
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
@@ -96,9 +95,7 @@
             .store_uint(addr, 256)
             .store_uint(0x400, 11)
             .store_uint(addr, 256)
-            .store_uint(0, 1)
-            .store_coins(1)
-            .store_uint(0, 1)
+            .store_uint(0x202, 1 + 4 + 8 + 1) ;; 00001000000010
             .end_cell();
         cell msg = begin_cell()
             .store_uint(0x10, 6)
