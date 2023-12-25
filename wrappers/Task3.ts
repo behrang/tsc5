@@ -23,7 +23,7 @@ export class Task3 implements Contract {
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell().endCell(),
+            body: beginCell().storeUint(0, 32).endCell(),
         })
     }
 }
