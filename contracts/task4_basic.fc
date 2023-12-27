@@ -72,15 +72,14 @@ int is_solved?(int c, int e) inline {
     return false;
 }
 
-(cell, tuple, tuple) append_item(cell visited, tuple queue, tuple squeue,
-        int tr, int tc, int breaks, int prob, int d, tuple maze) inline {
+(cell, tuple, tuple) append_item(cell visited, tuple queue, tuple squeue, int tr, int tc, int breaks, int prob, int dist, tuple maze) inline {
     int t = encode(tr, tc);
     ( _, int v? ) = visited.udict_get?(10, t);
     ifnot v? {
         visited~udict_set_builder(10, t, begin_cell());
         int item = maze.at(tr).at(tc);
         tuple new_maze = maze.setAt(tr, maze.at(tr).setAt(tc, "!"u));
-        var new_item = [t, breaks, prob, d + 1, new_maze];
+        var new_item = [t, breaks, prob, dist + 1, new_maze];
         if item == "."u {
             queue~enqueue(new_item);
         } elseif item == "?"u {
@@ -115,15 +114,15 @@ int is_solved?(int c, int e) inline {
     cell visited = new_dict();
     tuple queue = empty_tuple();
     tuple squeue = empty_tuple();
-    queue~tpush([s, 0, 0, 1, maze]);
+    queue~tpush([s, 0, 0, 0, maze]);
     visited~udict_set_builder(10, s, begin_cell());
 
     int done? = false;
     do {
         if queue.tlen() {
-            [int c, int breaks, int prob, int d, maze] = queue~dequeue();
+            [int c, int breaks, int prob, int dist, maze] = queue~dequeue();
             if is_solved?(c, e) {
-                return ( -1, prob, d, maze);
+                return ( -1, prob, dist + 1, maze);
             }
 
             (int cr, int cc) = decode(c);
@@ -131,49 +130,49 @@ int is_solved?(int c, int e) inline {
             int tr = cr - 1;
             int tc = cc - 1;
             if (tr >= 0) & (tc >= 0) {
-                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, d, maze); ;; TL
+                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, dist, maze); ;; TL
             }
 
             tc = cc + 1;
             if (tr >= 0) & (tc < m) {
-                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, d, maze); ;; TR
+                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, dist, maze); ;; TR
             }
 
             tr = cr + 1;
             if (tr < n) & (tc < m) {
-                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, d, maze); ;; BR
+                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, dist, maze); ;; BR
             }
 
             tc = cc - 1;
             if (tr < n) & (tc >= 0) {
-                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, d, maze); ;; BL
+                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, dist, maze); ;; BL
             }
 
             tc = cc;
             if tr < n {
-                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, d, maze); ;; B
+                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, dist, maze); ;; B
             }
 
             tr = cr - 1;
             if tr >= 0 {
-                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, d, maze); ;; T
+                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, dist, maze); ;; T
             }
 
             tr = cr;
             tc = cc - 1;
             if tc >= 0 {
-                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, d, maze); ;; L
+                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, dist, maze); ;; L
             }
 
             tc = cc + 1;
             if tc < m {
-                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, d, maze); ;; R
+                ( visited, queue, squeue ) = append_item(visited, queue, squeue, tr, tc, breaks, prob, dist, maze); ;; R
             }
 
         } elseif squeue.tlen() {
-            [int c, int breaks, int prob, int d, maze] = squeue~dequeue();
+            [int c, int breaks, int prob, int dist, maze] = squeue~dequeue();
             prob += 1;
-            queue~enqueue([c, breaks, prob, d, maze]);
+            queue~enqueue([c, breaks, prob, dist, maze]);
         } else {
             done? = true;
         }

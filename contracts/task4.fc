@@ -72,61 +72,63 @@ int is_solved?(int c, int e) inline {
     return false;
 }
 
-(cell, tuple, tuple, tuple) append_item(cell visited, tuple queue, tuple squeue, tuple xqueue,
-        int tr, int tc, int breaks, int prob, int d, tuple maze) inline {
+(cell, tuple, tuple, tuple) append_item(cell visited, tuple queue, tuple squeue, tuple xstack,
+        int tr, int tc, int breaks, int prob, int dist, tuple maze) inline {
     int t = encode(tr, tc);
     ( _, int v? ) = visited.udict_get?(10, t);
     ifnot v? {
         visited~udict_set_builder(10, t, begin_cell());
         int item = maze.at(tr).at(tc);
         tuple new_maze = maze.setAt(tr, maze.at(tr).setAt(tc, "!"u));
-        var new_item = [t, breaks, prob, d + 1, new_maze];
         if item == "."u {
-            queue~enqueue(new_item);
+            queue~enqueue([t, breaks, prob, dist + 1, new_maze]);
         } elseif item == "?"u {
-            squeue~enqueue(new_item);
+            squeue~enqueue([t, breaks, prob + 1, dist + 1, new_maze]);
         } elseif item == "X"u {
-            xqueue~enqueue(new_item);
+            xstack = cons([t, breaks + 1, prob, dist + 1, new_maze], xstack);
         }
     }
-    return ( visited, queue, squeue, xqueue );
+    return ( visited, queue, squeue, xstack );
 }
 
-(int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
-    ;; find start (s) and end (e) positions
-    int s = null();
-    int e = null();
-    int i = 0;
-    while i < n {
-        tuple row = maze.at(i);
-        int j = 0;
-        while j < m {
-            int item = row.at(j);
-            if item == "S"u {
-                s = encode(i, j);
-            }
-            if item == "E"u {
-                e = encode(i, j);
-            }
-            ;; todo: break if both are found
-            j += 1;
-        }
-        i += 1;
+(int, int, int, tuple) choose_best(int b, int p, int d, tuple m, int tb, int tp, int td, tuple tm) inline {
+    if tm.null?() {
+        return ( b, p, d, m );
     }
+    if d == 0 {
+        return ( tb, tp, td, tm );
+    }
+    if tb < b {
+        return ( tb, tp, td, tm );
+    }
+    if tb > b {
+        return ( b, p, d, m );
+    }
+    if tp < p {
+        return ( tb, tp, td, tm );
+    }
+    if tp > p {
+        return ( b, p, d, m );
+    }
+    if td < d {
+        return ( tb, tp, td, tm );
+    }
+    return ( b, p, d, m );
+}
 
-    cell visited = new_dict();
+(int, int, int, tuple) do_solve(cell visited, int start, int end, int n, int m, tuple maze) {
     tuple queue = empty_tuple();
     tuple squeue = empty_tuple();
-    tuple xqueue = empty_tuple();
-    queue~tpush([s, 0, 0, 1, maze]);
-    visited~udict_set_builder(10, s, begin_cell());
+    tuple xstack = null();
+    queue~tpush([start, 0, 0, 0, maze]);
+    visited~udict_set_builder(10, start, begin_cell());
 
     int done? = false;
     do {
         if queue.tlen() {
-            [int c, int breaks, int prob, int d, maze] = queue~dequeue();
-            if is_solved?(c, e) {
-                return ( breaks, prob, d, maze);
+            [int c, int breaks, int prob, int dist, maze] = queue~dequeue();
+            if is_solved?(c, end) {
+                return ( breaks, prob, dist + 1, maze);
             }
 
             (int cr, int cc) = decode(c);
@@ -134,59 +136,88 @@ int is_solved?(int c, int e) inline {
             int tr = cr - 1;
             int tc = cc - 1;
             if (tr >= 0) & (tc >= 0) {
-                ( visited, queue, squeue, xqueue ) = append_item(visited, queue, squeue, xqueue, tr, tc, breaks, prob, d, maze); ;; TL
+                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; TL
             }
 
             tc = cc + 1;
             if (tr >= 0) & (tc < m) {
-                ( visited, queue, squeue, xqueue ) = append_item(visited, queue, squeue, xqueue, tr, tc, breaks, prob, d, maze); ;; TR
+                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; TR
             }
 
             tr = cr + 1;
             if (tr < n) & (tc < m) {
-                ( visited, queue, squeue, xqueue ) = append_item(visited, queue, squeue, xqueue, tr, tc, breaks, prob, d, maze); ;; BR
+                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; BR
             }
 
             tc = cc - 1;
             if (tr < n) & (tc >= 0) {
-                ( visited, queue, squeue, xqueue ) = append_item(visited, queue, squeue, xqueue, tr, tc, breaks, prob, d, maze); ;; BL
+                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; BL
             }
 
             tc = cc;
             if tr < n {
-                ( visited, queue, squeue, xqueue ) = append_item(visited, queue, squeue, xqueue, tr, tc, breaks, prob, d, maze); ;; B
+                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; B
             }
 
             tr = cr - 1;
             if tr >= 0 {
-                ( visited, queue, squeue, xqueue ) = append_item(visited, queue, squeue, xqueue, tr, tc, breaks, prob, d, maze); ;; T
+                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; T
             }
 
             tr = cr;
             tc = cc - 1;
             if tc >= 0 {
-                ( visited, queue, squeue, xqueue ) = append_item(visited, queue, squeue, xqueue, tr, tc, breaks, prob, d, maze); ;; L
+                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; L
             }
 
             tc = cc + 1;
             if tc < m {
-                ( visited, queue, squeue, xqueue ) = append_item(visited, queue, squeue, xqueue, tr, tc, breaks, prob, d, maze); ;; R
+                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; R
             }
 
         } elseif squeue.tlen() {
-            [int c, int breaks, int prob, int d, maze] = squeue~dequeue();
-            prob += 1;
-            queue~enqueue([c, breaks, prob, d, maze]);
-        } elseif xqueue.tlen() {
-            [int c, int breaks, int prob, int d, maze] = xqueue~dequeue();
-            breaks += 1;
-            queue~enqueue([c, breaks, prob, d, maze]);
+            queue~enqueue(squeue~dequeue());
         } else {
             done? = true;
         }
     } until done?;
 
-    return ( 0, 0, 0, null() );
+    int b = 0;
+    int p = 0;
+    int d = 0;
+    tuple z = null();
+
+    while ~ xstack.null?() {
+        [int c, int breaks, int prob, int dist, maze] = xstack~list_next();
+        ( int x, int y ) = decode(c);
+        ( int tb, int tp, int td, tuple tm ) = do_solve(visited, c, end, n, m, maze);
+        ( b, p, d, z ) = choose_best(b, p, d, z, breaks + tb, prob + tp, dist + td, tm);
+    }
+    return ( b, p, d, z );
+}
+
+(int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
+    ;; find start (s) and end (e) positions
+    int start = null();
+    int end = null();
+    int i = 0;
+    while i < n {
+        tuple row = maze.at(i);
+        int j = 0;
+        while j < m {
+            int item = row.at(j);
+            if item == "S"u {
+                start = encode(i, j);
+            }
+            if item == "E"u {
+                end = encode(i, j);
+            }
+            ;; todo: break if both are found
+            j += 1;
+        }
+        i += 1;
+    }
+    return do_solve(new_dict(), start, end, n, m, maze);
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {

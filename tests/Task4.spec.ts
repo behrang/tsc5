@@ -60,7 +60,7 @@ describe('Task4', () => {
         const expectedSolution = createMaze(
             '| X | X | X | X | X | X | E | . |\n'+
             '| X | X | ! | X | X | X | X | ! |\n'+
-            '| X | ! | X | ! | X | X | ! | X |\n'+
+            '| X | ! | X | ! | X | X | X | ! |\n'+
             '| ! | ? | X | S | X | X | X | ! |\n'+
             '| ? | ! | X | X | X | X | X | ! |\n'+
             '| X | X | ! | . | X | X | X | ! |\n'+
@@ -68,7 +68,7 @@ describe('Task4', () => {
             '| X | X | X | . | ! | ! | X | X |\n')
         const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
         console.log(format(maze))
-        console.log(format(solution))
+        console.log(breaks, superpositions, distance, format(solution))
         expect(breaks).toEqual(1)
         expect(superpositions).toEqual(1)
         expect(distance).toEqual(16)
@@ -124,6 +124,26 @@ describe('Task4', () => {
         expect(breaks).toEqual(0)
         expect(superpositions).toEqual(0)
         expect(distance).toEqual(16)
+        expect(solution).toEqual(expectedSolution)
+    })
+
+    it('should solve another example 4', async () => {
+        const maze = createMaze(
+            '| . | X | . | . | . | E |\n' +
+            '| . | X | . | X | X | X |\n' +
+            '| . | X | X | . | . | . |\n' +
+            '| . | X | X | X | X | X |\n' +
+            '| S | . | . | . | . | . |\n')
+        const expectedSolution = createMaze(
+            '| . | X | . | ! | ! | E |\n' +
+            '| . | X | ! | X | X | X |\n' +
+            '| . | ! | X | . | . | . |\n' +
+            '| ! | X | X | X | X | X |\n' +
+            '| S | . | . | . | . | . |\n')
+        const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
+        expect(breaks).toEqual(1)
+        expect(superpositions).toEqual(0)
+        expect(distance).toEqual(6)
         expect(solution).toEqual(expectedSolution)
     })
 })
