@@ -90,7 +90,7 @@ int is_solved?(int c, int e) inline {
     return ( visited, queue, squeue );
 }
 
-(int, int, int, tuple) solve_maze(int n, int m, tuple maze) method_id {
+(int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
     ;; find start (s) and end (e) positions
     int s = null();
     int e = null();

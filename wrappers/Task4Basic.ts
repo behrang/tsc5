@@ -34,7 +34,7 @@ export class Task4Basic implements Contract {
         tb.writeNumber(n)
         tb.writeNumber(m)
         tb.writeTuple(maze)
-        const { stack } = await provider.get('solve_maze', tb.build())
+        const { stack } = await provider.get('solve', tb.build())
         const remove = stack.readNumber()
         const superpositions = stack.readNumber()
         const distance = stack.readNumber()
