@@ -2,19 +2,54 @@
 
 int tlen(tuple) asm "TLEN";
 forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
-(tuple, ()) enqueue(tuple, [int, int, int, int, tuple]) asm "TPUSH";
+(tuple, ()) enqueue(tuple, [int, int, int, int, tuple]) asm
+    """
+        SWAP // e pq
+        DUP // e pq pq
+        TLEN // e pq n
+        IFNOT:<{
+            NIL // e pq cq
+        }>ELSE<{
+            TPOP // e pq cq
+            DUP // e pq cq cq
+            TLEN // e pq cq n
+            255 PUSHINT // e pq cq n x=255
+            EQUAL // e pq cq f
+            IF:<{
+                TPUSH // e pq
+                NIL // e pq cq
+            }>
+        }>
+        ROT // pq cq e
+        TPUSH // pq cq
+        TPUSH // pq
+    """;
 (tuple, [int, int, int, int, tuple]) dequeue(tuple) asm
     """
-        // t
-        DUP // t t
-        TLEN // t n
-        DUP // t n n
-        1 SETGLOB // t n
-        UNTUPLEVAR // x_1 ... x_n
-        1 GETGLOB // x_1 ... x_n n
-        DEC // x_1 ... x_n (n-1)
-        TUPLEVAR // x_1 t
-        SWAP // t x_1
+        DUP // pq pq
+        FIRST // pq cq
+        DUP // pq cq cq
+        TLEN // pq cq n
+        EXPLODEVAR // pq e_1 ... e_n n
+        DEC // pq e_1 ... e_n n-1
+        DUP // pq e_1 ... e_n n-1 n-1
+        IF:<{
+            TUPLEVAR // pq e_1 cq
+            SWAP // pq cq e_1
+            -ROT // e_1 pq cq
+            SETFIRST // e_1 pq
+            SWAP // pq e_1
+        }>ELSE<{
+            DROP // pq e_1
+            SWAP // e_1 pq
+            DUP // e_1 pq pq
+            TLEN // e_1 pq n
+            EXPLODEVAR // e_1 cq_1 ... cq_n n
+            DEC // e_1 cq_1 ... cq_n n-1
+            TUPLEVAR // e_1 cq_1 pq
+            -ROT // pq e_1 cq_1
+            DROP // pq e_1
+        }>
     """;
 
 int encode(int row, int col) inline {
@@ -120,7 +155,7 @@ int is_solved?(int c, int e) inline {
     tuple queue = empty_tuple();
     tuple squeue = empty_tuple();
     tuple xstack = null();
-    queue~tpush([start, 0, 0, 0, maze]);
+    queue~enqueue([start, 0, 0, 0, maze]);
     visited~udict_set_builder(10, start, begin_cell());
 
     int done? = false;

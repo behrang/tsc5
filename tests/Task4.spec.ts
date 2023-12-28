@@ -45,7 +45,7 @@ describe('Task4', () => {
         expect(superpositions).toEqual(0)
         expect(distance).toEqual(1)
         expect(solution).toEqual(maze)
-        })
+    })
 
     it('should solve example 1', async () => {
         const maze = createMaze(
@@ -129,95 +129,95 @@ describe('Task4', () => {
 
     it('should solve another example 4', async () => {
         const maze = createMaze(
-            '| . | X | . | . | . | E |\n' +
-            '| . | X | . | X | X | X |\n' +
-            '| . | X | X | . | . | . |\n' +
+            '| . | X | X | X | X | E |\n' +
             '| . | X | X | X | X | X |\n' +
-            '| S | . | . | . | . | . |\n')
+            '| . | X | X | X | X | X |\n' +
+            '| . | X | X | X | X | X |\n' +
+            '| S | X | . | . | . | . |\n')
         const expectedSolution = createMaze(
-            '| . | X | . | ! | ! | E |\n' +
+            '| . | X | X | X | X | E |\n' +
+            '| . | X | X | X | ! | X |\n' +
+            '| . | X | X | ! | X | X |\n' +
             '| . | X | ! | X | X | X |\n' +
-            '| . | ! | X | . | . | . |\n' +
-            '| ! | X | X | X | X | X |\n' +
-            '| S | . | . | . | . | . |\n')
+            '| S | ! | . | . | . | . |\n')
         const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
-        expect(breaks).toEqual(1)
+        console.log(format(maze))
+        console.log(breaks, superpositions, distance, format(solution))
+        expect(breaks).toEqual(4)
         expect(superpositions).toEqual(0)
-        expect(distance).toEqual(6)
+        expect(distance).toEqual(5)
         expect(solution).toEqual(expectedSolution)
     })
 
     it('should solve another example 5', async () => {
         const maze = createMaze(
-            '............................X.E\n' +
-            '............................X..\n' +
-            '............................XXX\n' +
+            'E..............................\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
             '...............................\n' +
+            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
             '...............................\n' +
+            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
             '...............................\n' +
+            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
             '...............................\n' +
+            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
             '...............................\n' +
+            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
             '...............................\n' +
+            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
             '...............................\n' +
+            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            '...............................\n' +
-            'XXX............................\n' +
-            '..X............................\n' +
-            'S.X............................\n')
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
+            'S..............................\n')
         const expectedSolution = createMaze(
-            '............................X.E\n' +
-            '............................X!.\n' +
-            '............................!XX\n' +
-            '...........................!...\n' +
-            '..........................!....\n' +
-            '.........................!.....\n' +
-            '........................!......\n' +
-            '.......................!.......\n' +
-            '......................!........\n' +
-            '.....................!.........\n' +
-            '....................!..........\n' +
-            '...................!...........\n' +
-            '..................!............\n' +
-            '.................!.............\n' +
-            '................!..............\n' +
-            '...............!...............\n' +
-            '..............!................\n' +
-            '.............!.................\n' +
-            '............!..................\n' +
-            '...........!...................\n' +
-            '..........!....................\n' +
-            '.........!.....................\n' +
-            '........!......................\n' +
-            '.......!.......................\n' +
-            '......!........................\n' +
-            '.....!.........................\n' +
-            '....!..........................\n' +
-            '...!...........................\n' +
-            'XX!............................\n' +
-            '.!X............................\n' +
-            'S.X............................\n')
+            'E!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            '!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            '!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            '!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            '!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            '!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            '!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            '!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!\n' +
+            'S!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n')
         const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
-        console.log(format(maze))
-        console.log(breaks, superpositions, distance, format(solution))
-        expect(breaks).toEqual(2)
+        expect(breaks).toEqual(0)
         expect(superpositions).toEqual(0)
-        expect(distance).toEqual(30)
+        expect(distance).toEqual(480)
         expect(solution).toEqual(expectedSolution)
     })
 })
