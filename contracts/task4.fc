@@ -197,6 +197,7 @@ int is_solved?(int c, int e) inline {
 }
 
 (int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
+    set_gas_limit(100000000);
     ;; find start (s) and end (e) positions
     int start = null();
     int end = null();
