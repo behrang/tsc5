@@ -60,7 +60,7 @@ describe('Task4', () => {
         const expectedSolution = createMaze(
             '| X | X | X | X | X | X | E | . |\n'+
             '| X | X | ! | X | X | X | X | ! |\n'+
-            '| X | ! | X | ! | X | X | X | ! |\n'+
+            '| X | ! | X | ! | X | X | ! | X |\n'+
             '| ! | ? | X | S | X | X | X | ! |\n'+
             '| ? | ! | X | X | X | X | X | ! |\n'+
             '| X | X | ! | . | X | X | X | ! |\n'+
@@ -135,11 +135,11 @@ describe('Task4', () => {
             '| . | X | X | X | X | X |\n' +
             '| S | X | . | . | . | . |\n')
         const expectedSolution = createMaze(
-            '| . | X | X | X | X | E |\n' +
-            '| . | X | X | X | ! | X |\n' +
+            '| . | X | X | X | ! | E |\n' +
             '| . | X | X | ! | X | X |\n' +
             '| . | X | ! | X | X | X |\n' +
-            '| S | ! | . | . | . | . |\n')
+            '| . | ! | X | X | X | X |\n' +
+            '| S | X | . | . | . | . |\n')
         const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
         console.log(format(maze))
         console.log(breaks, superpositions, distance, format(solution))
@@ -174,13 +174,13 @@ describe('Task4', () => {
             '...............................\n' +
             'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
             '...............................\n' +
-            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '?XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
-            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX?\n' +
             '...............................\n' +
-            '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
+            '?XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n' +
             '...............................\n' +
-            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.\n' +
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX?\n' +
             'S..............................\n')
         const expectedSolution = createMaze(
             'E!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n' +
@@ -216,9 +216,146 @@ describe('Task4', () => {
             'S!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.\n')
         const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
         expect(breaks).toEqual(0)
-        expect(superpositions).toEqual(0)
+        expect(superpositions).toEqual(4)
         expect(distance).toEqual(480)
         expect(solution).toEqual(expectedSolution)
+    })
+
+    it('should solve another example 6', async () => {
+        // blockchain.verbosity = {
+        //     print: true,
+        //     blockchainLogs: true,
+        //     debugLogs: true,
+        //     vmLogs: 'none',
+        // }
+        const maze = createMaze([
+            '.X.?.X.X.E',
+            '.X.?.X.X..',
+            '.X.?.X.XXX',
+            '.X.?.X....',
+            '.X.?.XXXXX',
+            '.X.?......',
+            '.X.???????',
+            '.X........',
+            '.XXXXXXXXX',
+            'S.........',
+        ].join('\n'))
+        const expectedSolution = createMaze([
+            '.X.?.X.X.E',
+            '.X.?.X.X!.',
+            '.X.?.X.!XX',
+            '.X.?.X!...',
+            '.X.?.!XXXX',
+            '.X.?!.....',
+            '.X.!??????',
+            '.X!.......',
+            '.!XXXXXXXX',
+            'S.........',
+        ].join('\n'))
+        const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
+        console.log(format(maze))
+        console.log(format(solution))
+        expect(breaks).toEqual(3)
+        expect(superpositions).toEqual(1)
+        expect(distance).toEqual(9)
+        expect(solution).toEqual(expectedSolution)
+    })
+
+    it('should solve another example 7', async () => {
+        // blockchain.verbosity = {
+        //     print: true,
+        //     blockchainLogs: true,
+        //     debugLogs: true,
+        //     vmLogs: 'none',
+        // }
+        const maze = createMaze([
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXE',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+            'SXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+        ].join('\n'))
+        const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
+        console.log(format(maze))
+        console.log(format(solution))
+        expect(breaks).toEqual(29)
+        expect(superpositions).toEqual(0)
+        expect(distance).toEqual(30)
+    })
+
+    it('should solve another example 8', async () => {
+        // blockchain.verbosity = {
+        //     print: true,
+        //     blockchainLogs: true,
+        //     debugLogs: true,
+        //     vmLogs: 'none',
+        // }
+        const maze = createMaze([
+            '.......??........??............',
+            '.......?X..E..X.???............',
+            '........X.....X????............',
+            '........XXXXXXX????............',
+            '..............?????............',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '...............................',
+            '............????????...........',
+            '............?......?...........',
+            '............?......?...........',
+            '............?..S...?...........',
+            '............?..................',
+        ].join('\n'))
+        const [breaks, superpositions, distance, solution ] = await task4.getSolveMaze(maze)
+        console.log(format(maze))
+        console.log(format(solution))
+        console.log(breaks, superpositions, distance)
+        expect(breaks).toEqual(0)
+        expect(superpositions).toEqual(2)
+        expect(distance).toEqual(37)
     })
 })
 

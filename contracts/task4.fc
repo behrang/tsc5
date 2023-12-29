@@ -1,7 +1,23 @@
 #include "imports/stdlib.fc";
 
+global cell visited;
+
 int tlen(tuple) asm "TLEN";
+
 forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
+
+;; (tuple, ()) enqueue(tuple, [int, int, int, int, tuple]) asm "TPUSH";
+
+;; (tuple, [int, int, int, int, tuple]) dequeue(tuple) asm
+;;     """
+;;         DUP // t t
+;;         TLEN // t n
+;;         EXPLODEVAR // e_1 ... e_n n
+;;         DEC // e_1 ... e_n n-1
+;;         TUPLEVAR // e_1 t
+;;         SWAP // t, e_1
+;;     """;
+
 (tuple, ()) enqueue(tuple, [int, int, int, int, tuple]) asm
     """
         SWAP // e pq
@@ -63,43 +79,43 @@ int encode(int row, int col) inline {
     return (row, col);
 }
 
-int is_solved?(int c, int e) inline {
-    ( int cr, int cc ) = decode(c);
+int is_solved?(int p, int e) inline {
+    ( int pr, int pc ) = decode(p);
     ( int er, int ec ) = decode(e);
 
     ;; 4 3 5
     ;; 1 c 2
     ;; 7 6 8
 
-    if cr == er {
-        if cc - 1 == ec { ;; L
+    if pr == er {
+        if pc - 1 == ec { ;; L
             return true;
         }
-        if cc + 1 == ec { ;; R
-            return true;
-        }
-    }
-
-    if cr - 1 == er {
-        if cc == ec { ;; T
-            return true;
-        }
-        if cc - 1 == ec { ;; TL
-            return true;
-        }
-        if cc + 1 == ec { ;; TR
+        if pc + 1 == ec { ;; R
             return true;
         }
     }
 
-    if cr + 1 == er {
-        if cc == ec { ;; B
+    if pr - 1 == er {
+        if pc == ec { ;; T
             return true;
         }
-        if cc - 1 == ec { ;; BL
+        if pc - 1 == ec { ;; TL
             return true;
         }
-        if cc + 1 == ec { ;; BR
+        if pc + 1 == ec { ;; TR
+            return true;
+        }
+    }
+
+    if pr + 1 == er {
+        if pc == ec { ;; B
+            return true;
+        }
+        if pc - 1 == ec { ;; BL
+            return true;
+        }
+        if pc + 1 == ec { ;; BR
             return true;
         }
     }
@@ -107,23 +123,65 @@ int is_solved?(int c, int e) inline {
     return false;
 }
 
-(cell, tuple, tuple, tuple) append_item(cell visited, tuple queue, tuple squeue, tuple xstack,
-        int tr, int tc, int breaks, int prob, int dist, tuple maze) inline {
-    int t = encode(tr, tc);
-    ( _, int v? ) = visited.udict_get?(10, t);
-    ifnot v? {
-        visited~udict_set_builder(10, t, begin_cell());
-        int item = maze.at(tr).at(tc);
-        tuple new_maze = maze.setAt(tr, maze.at(tr).setAt(tc, "!"u));
-        if item == "."u {
-            queue~enqueue([t, breaks, prob, dist + 1, new_maze]);
-        } elseif item == "?"u {
-            squeue~enqueue([t, breaks, prob + 1, dist + 1, new_maze]);
-        } elseif item == "X"u {
-            xstack = cons([t, breaks + 1, prob, dist + 1, new_maze], xstack);
+int append?(int pos, int breaks, int prob, int dist) impure inline {
+    ( slice value, int f? ) = visited.udict_get?(10, pos);
+    if f? {
+        int b = value~load_uint(16);
+        int p = value~load_uint(16);
+        int d = value~load_uint(16);
+        int c? = value~load_int(1);
+        if breaks > b {
+            return false;
+        }
+        if (breaks == b) & (prob > p) {
+            return false;
+        }
+        if (breaks == b) & (prob == p) & (dist > d) {
+            return false;
+        }
+        if (breaks == b) & (prob == p) & (dist == d) {
+            return false;
         }
     }
-    return ( visited, queue, squeue, xstack );
+    visited~udict_set_builder(10, pos, begin_cell().store_uint(breaks, 16).store_uint(prob, 16).store_uint(dist, 16).store_int(0, 1));
+    return true;
+}
+
+int is_processed?(int pos, int breaks, int prob, int dist) inline {
+    ( slice value, int f? ) = visited.udict_get?(10, pos);
+    throw_unless(100, f?);
+    int b = value~load_uint(16);
+    int p = value~load_uint(16);
+    int d = value~load_uint(16);
+    int c? = value~load_int(1);
+    if (breaks == b) & (prob == p) & (dist == d) {
+        ifnot c? {
+            visited~udict_set_builder(10, pos, begin_cell().store_uint(b, 16).store_uint(p, 16).store_uint(d, 16).store_int(-1, 1));
+        }
+        return c?;
+    }
+    return -1;
+}
+
+(tuple, tuple, tuple) add_to_queue(tuple queue, tuple squeue, tuple xqueue, int sr, int sc, int breaks, int prob, int dist, tuple maze) {
+    int item = maze.at(sr).at(sc);
+    if item == "?"u {
+        prob += 1;
+    } elseif item == "X"u {
+        breaks += 1;
+    }
+    int start = encode(sr, sc);
+    if append?(start, breaks, prob, dist) {
+        tuple new_maze = maze.setAt(sr, maze.at(sr).setAt(sc, "!"u));
+        if item == "."u {
+            queue~enqueue([start, breaks, prob, dist, new_maze]);
+        } elseif item == "?"u {
+            squeue~enqueue([start, breaks, prob, dist, new_maze]);
+        } elseif item == "X"u {
+            xqueue~enqueue([start, breaks, prob, dist, new_maze]);
+        }
+    }
+    return ( queue, squeue, xqueue );
 }
 
 (int, int, int, tuple) choose_best(int b, int p, int d, tuple m, int tb, int tp, int td, tuple tm) inline {
@@ -151,96 +209,16 @@ int is_solved?(int c, int e) inline {
     return ( b, p, d, m );
 }
 
-(int, int, int, tuple) do_solve(cell visited, int start, int end, int n, int m, tuple maze) {
-    tuple queue = empty_tuple();
-    tuple squeue = empty_tuple();
-    tuple xstack = null();
-    queue~enqueue([start, 0, 0, 0, maze]);
-    visited~udict_set_builder(10, start, begin_cell());
-
-    int done? = false;
-    do {
-        if queue.tlen() {
-            [int c, int breaks, int prob, int dist, maze] = queue~dequeue();
-            if is_solved?(c, end) {
-                return ( breaks, prob, dist + 1, maze);
-            }
-
-            (int cr, int cc) = decode(c);
-
-            int tr = cr - 1;
-            int tc = cc - 1;
-            if (tr >= 0) & (tc >= 0) {
-                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; TL
-            }
-
-            tc = cc + 1;
-            if (tr >= 0) & (tc < m) {
-                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; TR
-            }
-
-            tr = cr + 1;
-            if (tr < n) & (tc < m) {
-                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; BR
-            }
-
-            tc = cc - 1;
-            if (tr < n) & (tc >= 0) {
-                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; BL
-            }
-
-            tc = cc;
-            if tr < n {
-                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; B
-            }
-
-            tr = cr - 1;
-            if tr >= 0 {
-                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; T
-            }
-
-            tr = cr;
-            tc = cc - 1;
-            if tc >= 0 {
-                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; L
-            }
-
-            tc = cc + 1;
-            if tc < m {
-                ( visited, queue, squeue, xstack ) = append_item(visited, queue, squeue, xstack, tr, tc, breaks, prob, dist, maze); ;; R
-            }
-
-        } elseif squeue.tlen() {
-            queue~enqueue(squeue~dequeue());
-        } else {
-            done? = true;
-        }
-    } until done?;
-
-    int b = 0;
-    int p = 0;
-    int d = 0;
-    tuple z = null();
-
-    while ~ xstack.null?() {
-        [int c, int breaks, int prob, int dist, maze] = xstack~list_next();
-        ( int x, int y ) = decode(c);
-        ( int tb, int tp, int td, tuple tm ) = do_solve(visited, c, end, n, m, maze);
-        ( b, p, d, z ) = choose_best(b, p, d, z, breaks + tb, prob + tp, dist + td, tm);
-    }
-    return ( b, p, d, z );
-}
-
 (int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
     set_gas_limit(100000000);
     ;; find start (s) and end (e) positions
     int start = null();
     int end = null();
     int i = 0;
-    while i < n {
+    repeat n {
         tuple row = maze.at(i);
         int j = 0;
-        while j < m {
+        repeat m {
             int item = row.at(j);
             if item == "S"u {
                 start = encode(i, j);
@@ -253,7 +231,96 @@ int is_solved?(int c, int e) inline {
         }
         i += 1;
     }
-    return do_solve(new_dict(), start, end, n, m, maze);
+
+    int b = 0;
+    int p = 0;
+    int d = 0;
+    tuple z = null();
+    tuple queue = empty_tuple();
+    tuple squeue = empty_tuple();
+    tuple xqueue = empty_tuple();
+    int breaks = 0;
+    int prob = 0;
+    int dist = 0;
+    queue~enqueue([start, breaks, prob, dist, maze]);
+    append?(start, breaks, prob, dist);
+
+    int done? = false;
+    int solved? = false;
+    do {
+        if queue.tlen() {
+            [ start, breaks, prob, dist, maze ] = queue~dequeue();
+            dist += 1;
+
+            if is_solved?(start, end) {
+                ( b, p, d, z ) = choose_best(b, p, d, z, breaks, prob, dist, maze);
+                queue = empty_tuple();
+            } else {
+                ;; append neighbors
+                ( int sr, int sc ) = decode(start);
+
+                int tr = sr - 1;
+                int tc = sc - 1;
+                if (tr >= 0) & (tc >= 0) {
+                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; TL
+                }
+
+                tc = sc + 1;
+                if (tr >= 0) & (tc < m) {
+                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; TR
+                }
+
+                tr = sr + 1;
+                if (tr < n) & (tc < m) {
+                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; BR
+                }
+
+                tc = sc - 1;
+                if (tr < n) & (tc >= 0) {
+                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; BL
+                }
+
+                tc = sc;
+                if tr < n {
+                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; B
+                }
+
+                tr = sr - 1;
+                if tr >= 0 {
+                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; T
+                }
+
+                tr = sr;
+                tc = sc - 1;
+                if tc >= 0 {
+                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; L
+                }
+
+                tc = sc + 1;
+                if tc < m {
+                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; R
+                }
+            }
+        } elseif squeue.tlen() {
+            [ int ts, int tb, int tp, int td, tuple tz ] = squeue~dequeue();
+            if (d > 0) & (p < tp) {
+                squeue = empty_tuple();
+            } else {
+                queue~enqueue([ ts, tb, tp, td, tz ]);
+            }
+        } elseif xqueue.tlen() {
+            [ int ts, int tb, int tp, int td, tuple tz ] = xqueue~dequeue();
+            if (d > 0) & (b < tb) {
+                xqueue = empty_tuple();
+            } else {
+                queue~enqueue([ ts, tb, tp, td, tz ]);
+            }
+        } else {
+            done? = true;
+        }
+    } until done?;
+
+    return ( b, p, d, z );
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
