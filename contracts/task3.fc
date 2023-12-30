@@ -6,7 +6,7 @@ cell process_message(cell, int, int, cell, slice);
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
     int expected_version = in_msg_body~load_uint(32);
-    if expected_version == 0 {
+    ifnot expected_version {
         return wrap_storage(1, get_data()).set_data();
     }
 
