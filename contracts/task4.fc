@@ -1,13 +1,13 @@
 #include "imports/stdlib.fc";
 
 global tuple visited;
+global tuple queue;
+global tuple squeue;
+global tuple xqueue;
 global int result_breaks;
 global int result_prob;
 global int result_dist;
 global tuple result_maze;
-global tuple queue;
-global tuple squeue;
-global tuple xqueue;
 
 int tlen(tuple) asm "TLEN";
 
@@ -53,13 +53,9 @@ forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
         }>ELSE<{
             DROP // pq e_1
             SWAP // e_1 pq
-            DUP // e_1 pq pq
-            TLEN // e_1 pq n
-            EXPLODEVAR // e_1 cq_1 ... cq_n n
-            DEC // e_1 cq_1 ... cq_n n-1
-            TUPLEVAR // e_1 cq_1 pq
-            -ROT // pq e_1 cq_1
-            DROP // pq e_1
+            TPOP // e_1 pq cq
+            DROP // e_1 pq
+            SWAP // pq e_1
         }>
     """;
 
