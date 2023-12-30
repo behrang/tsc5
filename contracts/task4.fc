@@ -1,126 +1,121 @@
 #include "imports/stdlib.fc";
 
 global cell visited;
+global int result_breaks;
+global int result_prob;
+global int result_dist;
+global tuple result_maze;
+global tuple queue;
+global tuple squeue;
+global tuple xqueue;
 
 int tlen(tuple) asm "TLEN";
 
 forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
 
-(tuple, ()) enqueue(tuple, [int, int, int, int, tuple]) asm "TPUSH";
-
+(tuple, ()) enqueue(tuple, [int, int, int, int, tuple]) asm
+    """
+        SWAP // e pq
+        DUP // e pq pq
+        TLEN // e pq n
+        IFNOT:<{
+            NIL // e pq cq
+        }>ELSE<{
+            TPOP // e pq cq
+            DUP // e pq cq cq
+            TLEN // e pq cq n
+            255 PUSHINT // e pq cq n x=255
+            EQUAL // e pq cq f
+            IF:<{
+                TPUSH // e pq
+                NIL // e pq cq
+            }>
+        }>
+        ROT // pq cq e
+        TPUSH // pq cq
+        TPUSH // pq
+    """;
 (tuple, [int, int, int, int, tuple]) dequeue(tuple) asm
     """
-        DUP // t t
-        TLEN // t n
-        EXPLODEVAR // e_1 ... e_n n
-        DEC // e_1 ... e_n n-1
-        TUPLEVAR // e_1 t
-        SWAP // t, e_1
+        DUP // pq pq
+        FIRST // pq cq
+        DUP // pq cq cq
+        TLEN // pq cq n
+        EXPLODEVAR // pq e_1 ... e_n n
+        DEC // pq e_1 ... e_n n-1
+        DUP // pq e_1 ... e_n n-1 n-1
+        IF:<{
+            TUPLEVAR // pq e_1 cq
+            SWAP // pq cq e_1
+            -ROT // e_1 pq cq
+            SETFIRST // e_1 pq
+            SWAP // pq e_1
+        }>ELSE<{
+            DROP // pq e_1
+            SWAP // e_1 pq
+            DUP // e_1 pq pq
+            TLEN // e_1 pq n
+            EXPLODEVAR // e_1 cq_1 ... cq_n n
+            DEC // e_1 cq_1 ... cq_n n-1
+            TUPLEVAR // e_1 cq_1 pq
+            -ROT // pq e_1 cq_1
+            DROP // pq e_1
+        }>
     """;
-
-;; (tuple, ()) enqueue(tuple, [int, int, int, int, tuple]) asm
-;;     """
-;;         SWAP // e pq
-;;         DUP // e pq pq
-;;         TLEN // e pq n
-;;         IFNOT:<{
-;;             NIL // e pq cq
-;;         }>ELSE<{
-;;             TPOP // e pq cq
-;;             DUP // e pq cq cq
-;;             TLEN // e pq cq n
-;;             255 PUSHINT // e pq cq n x=255
-;;             EQUAL // e pq cq f
-;;             IF:<{
-;;                 TPUSH // e pq
-;;                 NIL // e pq cq
-;;             }>
-;;         }>
-;;         ROT // pq cq e
-;;         TPUSH // pq cq
-;;         TPUSH // pq
-;;     """;
-;; (tuple, [int, int, int, int, tuple]) dequeue(tuple) asm
-;;     """
-;;         DUP // pq pq
-;;         FIRST // pq cq
-;;         DUP // pq cq cq
-;;         TLEN // pq cq n
-;;         EXPLODEVAR // pq e_1 ... e_n n
-;;         DEC // pq e_1 ... e_n n-1
-;;         DUP // pq e_1 ... e_n n-1 n-1
-;;         IF:<{
-;;             TUPLEVAR // pq e_1 cq
-;;             SWAP // pq cq e_1
-;;             -ROT // e_1 pq cq
-;;             SETFIRST // e_1 pq
-;;             SWAP // pq e_1
-;;         }>ELSE<{
-;;             DROP // pq e_1
-;;             SWAP // e_1 pq
-;;             DUP // e_1 pq pq
-;;             TLEN // e_1 pq n
-;;             EXPLODEVAR // e_1 cq_1 ... cq_n n
-;;             DEC // e_1 cq_1 ... cq_n n-1
-;;             TUPLEVAR // e_1 cq_1 pq
-;;             -ROT // pq e_1 cq_1
-;;             DROP // pq e_1
-;;         }>
-;;     """;
 
 int encode(int row, int col) inline {
     ;; max length in advanced version is 31, so 5 bits is enough
-    return (row << 5) + col;
+    return col + (row << 5);
 }
 
 (int, int) decode(int p) inline {
-    int col = p & 0x1f;
     int row = p >> 5;
+    int col = p & 0x1f;
     return (row, col);
 }
 
 int is_solved?(int p, int e) inline {
-    ( int pr, int pc ) = decode(p);
     ( int er, int ec ) = decode(e);
+    ( int pr, int pc ) = decode(p);
 
-    ;; 4 3 5
-    ;; 1 c 2
-    ;; 7 6 8
-
-    if pr == er {
-        if pc - 1 == ec { ;; L
-            return true;
-        }
-        if pc + 1 == ec { ;; R
-            return true;
-        }
+    if pr < er - 1 {
+        return false;
+    } elseif pr > er + 1 {
+        return false;
+    } elseif pc < ec - 1 {
+        return false;
+    } elseif pc > ec + 1 {
+        return false;
+    } else {
+        return true;
     }
+}
 
-    if pr - 1 == er {
-        if pc == ec { ;; T
-            return true;
-        }
-        if pc - 1 == ec { ;; TL
-            return true;
-        }
-        if pc + 1 == ec { ;; TR
-            return true;
-        }
+() choose_best(int tb, int tp, int td, tuple tm) impure inline {
+    ifnot td {
+    } elseifnot result_dist {
+        result_breaks = tb;
+        result_prob = tp;
+        result_dist = td;
+        result_maze = tm;
+    } elseif tb < result_breaks {
+        result_breaks = tb;
+        result_prob = tp;
+        result_dist = td;
+        result_maze = tm;
+    } elseif tb > result_breaks {
+    } elseif tp < result_prob {
+        result_breaks = tb;
+        result_prob = tp;
+        result_dist = td;
+        result_maze = tm;
+    } elseif tp > result_prob {
+    } elseif td < result_dist {
+        result_breaks = tb;
+        result_prob = tp;
+        result_dist = td;
+        result_maze = tm;
     }
-
-    if pr + 1 == er {
-        if pc == ec { ;; B
-            return true;
-        }
-        if pc - 1 == ec { ;; BL
-            return true;
-        }
-        if pc + 1 == ec { ;; BR
-            return true;
-        }
-    }
-
-    return false;
 }
 
 int append?(int pos, int breaks, int prob, int dist) impure inline {
@@ -129,41 +124,21 @@ int append?(int pos, int breaks, int prob, int dist) impure inline {
         int b = value~load_uint(16);
         int p = value~load_uint(16);
         int d = value~load_uint(16);
-        int c? = value~load_int(1);
         if breaks > b {
             return false;
-        }
-        if (breaks == b) & (prob > p) {
+        } elseif (breaks == b) & (prob > p) {
             return false;
-        }
-        if (breaks == b) & (prob == p) & (dist > d) {
+        } elseif (breaks == b) & (prob == p) & (dist > d) {
             return false;
-        }
-        if (breaks == b) & (prob == p) & (dist == d) {
+        } elseif (breaks == b) & (prob == p) & (dist == d) {
             return false;
         }
     }
-    visited~udict_set_builder(10, pos, begin_cell().store_uint(breaks, 16).store_uint(prob, 16).store_uint(dist, 16).store_int(0, 1));
+    visited~udict_set_builder(10, pos, begin_cell().store_uint(breaks, 16).store_uint(prob, 16).store_uint(dist, 16));
     return true;
 }
 
-int is_processed?(int pos, int breaks, int prob, int dist) inline {
-    ( slice value, int f? ) = visited.udict_get?(10, pos);
-    throw_unless(100, f?);
-    int b = value~load_uint(16);
-    int p = value~load_uint(16);
-    int d = value~load_uint(16);
-    int c? = value~load_int(1);
-    if (breaks == b) & (prob == p) & (dist == d) {
-        ifnot c? {
-            visited~udict_set_builder(10, pos, begin_cell().store_uint(b, 16).store_uint(p, 16).store_uint(d, 16).store_int(-1, 1));
-        }
-        return c?;
-    }
-    return -1;
-}
-
-(tuple, tuple, tuple) add_to_queue(tuple queue, tuple squeue, tuple xqueue, int sr, int sc, int breaks, int prob, int dist, tuple maze) {
+() add_to_queue(int sr, int sc, int breaks, int prob, int dist, tuple maze) impure {
     int item = maze.at(sr).at(sc);
     if item == "?"u {
         prob += 1;
@@ -177,41 +152,15 @@ int is_processed?(int pos, int breaks, int prob, int dist) inline {
             queue~enqueue([start, breaks, prob, dist, new_maze]);
         } elseif item == "?"u {
             squeue~enqueue([start, breaks, prob, dist, new_maze]);
-        } elseif item == "X"u {
+        } else {
             xqueue~enqueue([start, breaks, prob, dist, new_maze]);
         }
     }
-    return ( queue, squeue, xqueue );
-}
-
-(int, int, int, tuple) choose_best(int b, int p, int d, tuple m, int tb, int tp, int td, tuple tm) inline {
-    if tm.null?() {
-        return ( b, p, d, m );
-    }
-    if d == 0 {
-        return ( tb, tp, td, tm );
-    }
-    if tb < b {
-        return ( tb, tp, td, tm );
-    }
-    if tb > b {
-        return ( b, p, d, m );
-    }
-    if tp < p {
-        return ( tb, tp, td, tm );
-    }
-    if tp > p {
-        return ( b, p, d, m );
-    }
-    if td < d {
-        return ( tb, tp, td, tm );
-    }
-    return ( b, p, d, m );
 }
 
 (int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
     set_gas_limit(100000000);
-    ;; find start (s) and end (e) positions
+    ;; find start and end positions
     int start = null();
     int end = null();
     int i = 0;
@@ -226,34 +175,29 @@ int is_processed?(int pos, int breaks, int prob, int dist) inline {
             if item == "E"u {
                 end = encode(i, j);
             }
-            ;; todo: break if both are found
             j += 1;
         }
         i += 1;
     }
 
-    int b = 0;
-    int p = 0;
-    int d = 0;
-    tuple z = null();
-    tuple queue = empty_tuple();
-    tuple squeue = empty_tuple();
-    tuple xqueue = empty_tuple();
-    int breaks = 0;
-    int prob = 0;
-    int dist = 0;
-    queue~enqueue([start, breaks, prob, dist, maze]);
-    append?(start, breaks, prob, dist);
+    result_breaks = 0;
+    result_prob = 0;
+    result_dist = 0;
+    result_maze = null();
+    queue = empty_tuple();
+    squeue = empty_tuple();
+    xqueue = empty_tuple();
+    queue~enqueue([start, 0, 0, 0, maze]);
+    append?(start, 0, 0, 0);
 
     int done? = false;
-    int solved? = false;
     do {
         if queue.tlen() {
-            [ start, breaks, prob, dist, maze ] = queue~dequeue();
+            [ start, int breaks, int prob, int dist, maze ] = queue~dequeue();
             dist += 1;
 
             if is_solved?(start, end) {
-                ( b, p, d, z ) = choose_best(b, p, d, z, breaks, prob, dist, maze);
+                choose_best(breaks, prob, dist, maze);
                 queue = empty_tuple();
             } else {
                 ;; append neighbors
@@ -262,55 +206,55 @@ int is_processed?(int pos, int breaks, int prob, int dist) inline {
                 int tr = sr - 1;
                 int tc = sc - 1;
                 if (tr >= 0) & (tc >= 0) {
-                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; TL
+                    add_to_queue(tr, tc, breaks, prob, dist, maze); ;; TL
                 }
 
                 tc = sc + 1;
                 if (tr >= 0) & (tc < m) {
-                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; TR
+                    add_to_queue(tr, tc, breaks, prob, dist, maze); ;; TR
                 }
 
                 tr = sr + 1;
                 if (tr < n) & (tc < m) {
-                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; BR
+                    add_to_queue(tr, tc, breaks, prob, dist, maze); ;; BR
                 }
 
                 tc = sc - 1;
                 if (tr < n) & (tc >= 0) {
-                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; BL
+                    add_to_queue(tr, tc, breaks, prob, dist, maze); ;; BL
                 }
 
                 tc = sc;
                 if tr < n {
-                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; B
+                    add_to_queue(tr, tc, breaks, prob, dist, maze); ;; B
                 }
 
                 tr = sr - 1;
                 if tr >= 0 {
-                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; T
+                    add_to_queue(tr, tc, breaks, prob, dist, maze); ;; T
                 }
 
                 tr = sr;
                 tc = sc - 1;
                 if tc >= 0 {
-                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; L
+                    add_to_queue(tr, tc, breaks, prob, dist, maze); ;; L
                 }
 
                 tc = sc + 1;
                 if tc < m {
-                    ( queue, squeue, xqueue ) = add_to_queue(queue, squeue, xqueue, tr, tc, breaks, prob, dist, maze); ;; R
+                    add_to_queue(tr, tc, breaks, prob, dist, maze); ;; R
                 }
             }
         } elseif squeue.tlen() {
             [ int ts, int tb, int tp, int td, tuple tz ] = squeue~dequeue();
-            if (d > 0) & (p < tp) {
+            if (result_dist > 0) & (result_prob < tp) {
                 squeue = empty_tuple();
             } else {
                 queue~enqueue([ ts, tb, tp, td, tz ]);
             }
         } elseif xqueue.tlen() {
             [ int ts, int tb, int tp, int td, tuple tz ] = xqueue~dequeue();
-            if (d > 0) & (b < tb) {
+            if (result_dist > 0) & (result_breaks < tb) {
                 xqueue = empty_tuple();
             } else {
                 queue~enqueue([ ts, tb, tp, td, tz ]);
@@ -320,7 +264,7 @@ int is_processed?(int pos, int breaks, int prob, int dist) inline {
         }
     } until done?;
 
-    return ( b, p, d, z );
+    return ( result_breaks, result_prob, result_dist, result_maze );
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
