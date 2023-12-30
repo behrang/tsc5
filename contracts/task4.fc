@@ -121,7 +121,7 @@ int is_solved?(int p, int e) inline {
 () init_visited(int n, int m) impure inline {
     tuple row = empty_tuple();
     repeat m {
-        row~tpush(0);
+        row~tpush(0xffffffffffff);
     }
     visited = empty_tuple();
     repeat n {
@@ -131,23 +131,12 @@ int is_solved?(int p, int e) inline {
 
 int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
     int v = visited.at(pr).at(pc);
-    if v {
-        int d = v & 0xffff;
-        int p = (v >> 16) & 0xffff;
-        int b = (v >> 32) & 0xffff;
-        if breaks > b {
-            return false;
-        } elseif (breaks == b) & (prob > p) {
-            return false;
-        } elseif (breaks == b) & (prob == p) & (dist > d) {
-            return false;
-        } elseif (breaks == b) & (prob == p) & (dist == d) {
-            return false;
-        }
+    int new_v = (breaks << 32) + (prob << 16) + dist;
+    if new_v < v {
+        visited = visited.setAt(pr, visited.at(pr).setAt(pc, new_v));
+        return true;
     }
-    v = (breaks << 32) + (prob << 16) + dist;
-    visited = visited.setAt(pr, visited.at(pr).setAt(pc, v));
-    return true;
+    return false;
 }
 
 () add_to_queue(int sr, int sc, int breaks, int prob, int dist, tuple maze) impure inline {
@@ -173,8 +162,6 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
 (int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
     set_gas_limit(100000000);
     ;; find start and end positions
-    int sr = null();
-    int sc = null();
     int start = null();
     int end = null();
     int i = 0;
@@ -185,8 +172,6 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
             int item = row.at(j);
             if item == "S"u {
                 start = encode(i, j);
-                sr = i;
-                sc = j;
             }
             if item == "E"u {
                 end = encode(i, j);
@@ -204,6 +189,7 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
     squeue = empty_tuple();
     xqueue = empty_tuple();
     queue~enqueue([start, 0, 0, 0, maze]);
+    ( int sr, int sc ) = decode(start);
     append?(sr, sc, 0, 0, 0);
 
     int done? = false;
