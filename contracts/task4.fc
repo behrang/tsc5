@@ -130,8 +130,8 @@ int is_solved?(int p, int e) inline {
 }
 
 int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
+    int new_v = dist + (prob << 16) + (breaks << 32);
     int v = visited.at(pr).at(pc);
-    int new_v = (breaks << 32) + (prob << 16) + dist;
     if new_v < v {
         visited = visited.setAt(pr, visited.at(pr).setAt(pc, new_v));
         return true;
@@ -147,8 +147,8 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
         breaks += 1;
     }
     if append?(sr, sc, breaks, prob, dist) {
-        tuple new_maze = maze.setAt(sr, maze.at(sr).setAt(sc, "!"u));
         int start = encode(sr, sc);
+        tuple new_maze = maze.setAt(sr, maze.at(sr).setAt(sc, "!"u));
         if item == "."u {
             queue~enqueue([start, breaks, prob, dist, new_maze]);
         } elseif item == "?"u {
