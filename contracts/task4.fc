@@ -1,6 +1,6 @@
 #include "imports/stdlib.fc";
 
-global cell visited;
+global tuple visited;
 global int result_breaks;
 global int result_prob;
 global int result_dist;
@@ -118,12 +118,23 @@ int is_solved?(int p, int e) inline {
     }
 }
 
-int append?(int pos, int breaks, int prob, int dist) impure inline {
-    ( slice value, int f? ) = visited.udict_get?(10, pos);
-    if f? {
-        int b = value~load_uint(16);
-        int p = value~load_uint(16);
-        int d = value~load_uint(16);
+() init_visited(int n, int m) impure inline {
+    tuple row = empty_tuple();
+    repeat m {
+        row~tpush(0);
+    }
+    visited = empty_tuple();
+    repeat n {
+        visited~tpush(row);
+    }
+}
+
+int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
+    int v = visited.at(pr).at(pc);
+    if v {
+        int d = v & 0xffff;
+        int p = (v >> 16) & 0xffff;
+        int b = (v >> 32) & 0xffff;
         if breaks > b {
             return false;
         } elseif (breaks == b) & (prob > p) {
@@ -134,20 +145,21 @@ int append?(int pos, int breaks, int prob, int dist) impure inline {
             return false;
         }
     }
-    visited~udict_set_builder(10, pos, begin_cell().store_uint(breaks, 16).store_uint(prob, 16).store_uint(dist, 16));
+    v = (breaks << 32) + (prob << 16) + dist;
+    visited = visited.setAt(pr, visited.at(pr).setAt(pc, v));
     return true;
 }
 
-() add_to_queue(int sr, int sc, int breaks, int prob, int dist, tuple maze) impure {
+() add_to_queue(int sr, int sc, int breaks, int prob, int dist, tuple maze) impure inline {
     int item = maze.at(sr).at(sc);
     if item == "?"u {
         prob += 1;
     } elseif item == "X"u {
         breaks += 1;
     }
-    int start = encode(sr, sc);
-    if append?(start, breaks, prob, dist) {
+    if append?(sr, sc, breaks, prob, dist) {
         tuple new_maze = maze.setAt(sr, maze.at(sr).setAt(sc, "!"u));
+        int start = encode(sr, sc);
         if item == "."u {
             queue~enqueue([start, breaks, prob, dist, new_maze]);
         } elseif item == "?"u {
@@ -161,6 +173,8 @@ int append?(int pos, int breaks, int prob, int dist) impure inline {
 (int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
     set_gas_limit(100000000);
     ;; find start and end positions
+    int sr = null();
+    int sc = null();
     int start = null();
     int end = null();
     int i = 0;
@@ -171,6 +185,8 @@ int append?(int pos, int breaks, int prob, int dist) impure inline {
             int item = row.at(j);
             if item == "S"u {
                 start = encode(i, j);
+                sr = i;
+                sc = j;
             }
             if item == "E"u {
                 end = encode(i, j);
@@ -180,15 +196,15 @@ int append?(int pos, int breaks, int prob, int dist) impure inline {
         i += 1;
     }
 
+    init_visited(n, m);
     result_breaks = 0;
     result_prob = 0;
     result_dist = 0;
-    result_maze = null();
     queue = empty_tuple();
     squeue = empty_tuple();
     xqueue = empty_tuple();
     queue~enqueue([start, 0, 0, 0, maze]);
-    append?(start, 0, 0, 0);
+    append?(sr, sc, 0, 0, 0);
 
     int done? = false;
     do {
@@ -247,14 +263,14 @@ int append?(int pos, int breaks, int prob, int dist) impure inline {
             }
         } elseif squeue.tlen() {
             [ int ts, int tb, int tp, int td, tuple tz ] = squeue~dequeue();
-            if (result_dist > 0) & (result_prob < tp) {
+            if result_dist & (result_prob < tp) {
                 squeue = empty_tuple();
             } else {
                 queue~enqueue([ ts, tb, tp, td, tz ]);
             }
         } elseif xqueue.tlen() {
             [ int ts, int tb, int tp, int td, tuple tz ] = xqueue~dequeue();
-            if (result_dist > 0) & (result_breaks < tb) {
+            if result_dist & (result_breaks < tb) {
                 xqueue = empty_tuple();
             } else {
                 queue~enqueue([ ts, tb, tp, td, tz ]);
