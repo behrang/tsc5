@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode, Tuple, TupleBuilder, TupleItem, TupleReader } from 'ton-core'
+import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, fromNano, Sender, SendMode, Tuple, TupleBuilder, TupleItem, TupleReader } from 'ton-core'
 
 export type Task4Config = {}
 
@@ -34,7 +34,8 @@ export class Task4 implements Contract {
         tb.writeNumber(n)
         tb.writeNumber(m)
         tb.writeTuple(maze)
-        const { stack } = await provider.get('solve', tb.build())
+        const { stack, gasUsed } = await provider.get('solve', tb.build())
+        console.log(fromNano(gasUsed ?? 0n))
         const remove = stack.readNumber()
         const superpositions = stack.readNumber()
         const distance = stack.readNumber()
