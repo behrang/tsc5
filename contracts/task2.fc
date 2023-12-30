@@ -66,7 +66,7 @@
         cell msg = b
             .store_uint(addr, 256)
             .store_coins(x)
-            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_slice("000000000000000000000000001_"s) ;; .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
         send_raw_message(msg, 1);
     }
@@ -96,11 +96,11 @@
         int x = muldiv(share, amount, total);
         cell transfer = bb
             .store_coins(x)
-            .store_uint(0x400, 11)
+            .store_slice("801_"s) ;; .store_uint(0x400, 11)
             .store_uint(addr, 256)
-            .store_uint(0x400, 11)
+            .store_slice("801_"s) ;; .store_uint(0x400, 11)
             .store_uint(addr, 256)
-            .store_uint(0x202, 1 + 4 + 8 + 1) ;; 00001000000010
+            .store_slice("080a_"s) ;; .store_uint(0x202, 1 + 4 + 8 + 1) ;; 00001000000010
             .end_cell();
         cell msg = b
             .store_ref(transfer)
