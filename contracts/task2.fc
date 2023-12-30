@@ -1,10 +1,10 @@
 #include "imports/stdlib.fc";
 
-() save_data(slice admin_address, cell users, int total) impure inline {
+() save_data(int total, cell users, slice admin_address) impure inline {
     begin_cell()
         .store_slice(admin_address)
         .store_dict(users)
-        .store_uint(total, 32)
+        .store_uint(total, 64)
         .end_cell()
         .set_data();
 }
@@ -15,7 +15,7 @@
     cell users = ds~load_dict();
     int total = 0;
     if ds.slice_bits() {
-        total = ds~load_uint(32);
+        total = ds~load_uint(64);
     }
     return ( admin_address, users, total );
 }
@@ -25,19 +25,15 @@
 
     throw_unless(120, equal_slice_bits(src, admin_address));
 
-    int query_id = s~load_uint(64);
-    slice address = s~load_msg_addr();
+    s~skip_bits(64 + 11);
+    int addr = s~load_uint(256);
     int share = s~load_uint(32);
 
-    ( _, int addr ) = parse_std_addr(address);
-    ( slice value, int f? ) = users.udict_get?(256, addr);
-    if f? {
-        total -= value~load_uint(32);
-    }
+    ( slice value, _ ) = users.udict_get?(256, addr);
     total += share;
     users~udict_set_builder(256, addr, begin_cell().store_uint(share, 32));
 
-    save_data(admin_address, users, total);
+    save_data(total, users, admin_address);
 }
 
 () remove_user(slice src, slice s) impure inline {
@@ -45,19 +41,18 @@
 
     throw_unless(120, equal_slice_bits(src, admin_address));
 
-    int query_id = s~load_uint(64);
-    slice address = s~load_msg_addr();
+    s~skip_bits(64 + 11);
+    int addr = s~load_uint(256);
 
-    ( _, int addr ) = parse_std_addr(address);
     ( slice value, int d? ) = users~udict_delete_get?(256, addr);
     throw_unless(121, d?);
     total -= value~load_uint(32);
 
-    save_data(admin_address, users, total);
+    save_data(total, users, admin_address);
 }
 
-() split(slice src, slice s, int amount) impure inline {
-    ( slice admin_address, cell users, int total ) = load_data();
+() split(int amount) impure inline {
+    ( _, cell users, int total ) = load_data();
 
     throw_if(122, users.null?());
 
@@ -78,7 +73,7 @@
 }
 
 () notification(slice src, slice s) impure inline {
-    ( slice admin_address, cell users, int total ) = load_data();
+    ( _, cell users, int total ) = load_data();
 
     throw_if(122, users.null?());
 
@@ -134,21 +129,22 @@
     }
 
     if op == 0x068530b3 {
-        return split(src, in_msg_body, msg_value);
+        return split(msg_value);
     }
 
-    if op == 0x7362d09c {
-        return notification(src, in_msg_body);
-    }
+    return notification(src, in_msg_body);
 }
 
 cell get_users() method_id {
-    ( _, cell users, _ ) = load_data();
-    return users;
+    slice ds = get_data().begin_parse();
+    if ds.slice_refs() {
+        return ds.preload_ref();
+    }
+    return null();
 }
 
 int get_user_share(slice address) method_id {
-    ( _, cell users, _ ) = load_data();
+    cell users = get_data().begin_parse().preload_ref();
     ( _, int addr ) = parse_std_addr(address);
     ( slice value, _ ) = users.udict_get?(256, addr);
     return value~load_uint(32);
