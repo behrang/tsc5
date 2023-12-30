@@ -62,13 +62,13 @@ forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
     """;
 
 int is_solved?(int sr, int sc) inline {
-    if sr < er - 1 {
-        return false;
-    } elseif sr > er + 1 {
-        return false;
-    } elseif sc < ec - 1 {
+    if sc < ec - 1 {
         return false;
     } elseif sc > ec + 1 {
+        return false;
+    } elseif sr < er - 1 {
+        return false;
+    } elseif sr > er + 1 {
         return false;
     } else {
         return true;
