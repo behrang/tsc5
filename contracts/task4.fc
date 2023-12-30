@@ -4,6 +4,8 @@ global tuple visited;
 global tuple queue;
 global tuple squeue;
 global tuple xqueue;
+global int er;
+global int ec;
 global int result_breaks;
 global int result_prob;
 global int result_dist;
@@ -13,7 +15,7 @@ int tlen(tuple) asm "TLEN";
 
 forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
 
-(tuple, ()) enqueue(tuple, [int, int, int, int, tuple]) asm
+(tuple, ()) enqueue(tuple, [int, int, int, int, int, tuple]) asm
     """
         SWAP // e pq
         DUP // e pq pq
@@ -35,7 +37,7 @@ forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
         TPUSH // pq cq
         TPUSH // pq
     """;
-(tuple, [int, int, int, int, tuple]) dequeue(tuple) asm
+(tuple, [int, int, int, int, int, tuple]) dequeue(tuple) asm
     """
         DUP // pq pq
         FIRST // pq cq
@@ -59,28 +61,14 @@ forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
         }>
     """;
 
-int encode(int row, int col) inline {
-    ;; max length in advanced version is 31, so 5 bits is enough
-    return col + (row << 5);
-}
-
-(int, int) decode(int p) inline {
-    int row = p >> 5;
-    int col = p & 0x1f;
-    return (row, col);
-}
-
-int is_solved?(int p, int e) inline {
-    ( int er, int ec ) = decode(e);
-    ( int pr, int pc ) = decode(p);
-
-    if pr < er - 1 {
+int is_solved?(int sr, int sc) inline {
+    if sr < er - 1 {
         return false;
-    } elseif pr > er + 1 {
+    } elseif sr > er + 1 {
         return false;
-    } elseif pc < ec - 1 {
+    } elseif sc < ec - 1 {
         return false;
-    } elseif pc > ec + 1 {
+    } elseif sc > ec + 1 {
         return false;
     } else {
         return true;
@@ -143,14 +131,13 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
         breaks += 1;
     }
     if append?(sr, sc, breaks, prob, dist) {
-        int start = encode(sr, sc);
         tuple new_maze = maze.setAt(sr, maze.at(sr).setAt(sc, "!"u));
         if item == "."u {
-            queue~enqueue([start, breaks, prob, dist, new_maze]);
+            queue~enqueue([sr, sc, breaks, prob, dist, new_maze]);
         } elseif item == "?"u {
-            squeue~enqueue([start, breaks, prob, dist, new_maze]);
+            squeue~enqueue([sr, sc, breaks, prob, dist, new_maze]);
         } else {
-            xqueue~enqueue([start, breaks, prob, dist, new_maze]);
+            xqueue~enqueue([sr, sc, breaks, prob, dist, new_maze]);
         }
     }
 }
@@ -158,8 +145,8 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
 (int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
     set_gas_limit(100000000);
     ;; find start and end positions
-    int start = null();
-    int end = null();
+    int sr = null();
+    int sc = null();
     int i = 0;
     repeat n {
         tuple row = maze.at(i);
@@ -167,10 +154,12 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
         repeat m {
             int item = row.at(j);
             if item == "S"u {
-                start = encode(i, j);
+                sr = i;
+                sc = j;
             }
             if item == "E"u {
-                end = encode(i, j);
+                er = i;
+                ec = j;
             }
             j += 1;
         }
@@ -184,22 +173,20 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
     queue = empty_tuple();
     squeue = empty_tuple();
     xqueue = empty_tuple();
-    queue~enqueue([start, 0, 0, 0, maze]);
-    ( int sr, int sc ) = decode(start);
+    queue~enqueue([sr, sc, 0, 0, 0, maze]);
     append?(sr, sc, 0, 0, 0);
 
     int done? = false;
     do {
         if queue.tlen() {
-            [ start, int breaks, int prob, int dist, maze ] = queue~dequeue();
+            [ sr, sc, int breaks, int prob, int dist, maze ] = queue~dequeue();
             dist += 1;
 
-            if is_solved?(start, end) {
+            if is_solved?(sr, sc) {
                 choose_best(breaks, prob, dist, maze);
                 queue = empty_tuple();
             } else {
                 ;; append neighbors
-                ( int sr, int sc ) = decode(start);
 
                 int tr = sr - 1;
                 int tc = sc - 1;
@@ -244,18 +231,18 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
                 }
             }
         } elseif squeue.tlen() {
-            [ int ts, int tb, int tp, int td, tuple tz ] = squeue~dequeue();
+            [ int tsr, int tsc, int tb, int tp, int td, tuple tz ] = squeue~dequeue();
             if result_dist & (result_prob < tp) {
                 squeue = empty_tuple();
             } else {
-                queue~enqueue([ ts, tb, tp, td, tz ]);
+                queue~enqueue([ tsr, tsc, tb, tp, td, tz ]);
             }
         } elseif xqueue.tlen() {
-            [ int ts, int tb, int tp, int td, tuple tz ] = xqueue~dequeue();
+            [ int tsr, int tsc, int tb, int tp, int td, tuple tz ] = xqueue~dequeue();
             if result_dist & (result_breaks < tb) {
                 xqueue = empty_tuple();
             } else {
-                queue~enqueue([ ts, tb, tp, td, tz ]);
+                queue~enqueue([ tsr, tsc, tb, tp, td, tz ]);
             }
         } else {
             done? = true;
