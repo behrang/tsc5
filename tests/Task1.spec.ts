@@ -1,5 +1,5 @@
 import { Blockchain, SandboxContract, TreasuryContract, createShardAccount } from '@ton-community/sandbox'
-import { BitBuilder, BitString, Cell, Slice, beginCell, toNano } from 'ton-core'
+import { Cell, beginCell, toNano } from 'ton-core'
 import { Task1, task1ConfigToCell } from '../wrappers/Task1'
 import '@ton-community/test-utils'
 import { compile } from '@ton-community/blueprint'
