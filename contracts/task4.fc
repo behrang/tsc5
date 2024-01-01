@@ -13,7 +13,19 @@ global tuple result_maze;
 
 int tlen(tuple) asm "TLEN";
 
-forall X -> tuple setAt(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
+forall X -> tuple tset(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
+
+tuple init_visited(int x) asm
+    """
+    15 0 BLKPUSH // x ... x
+    15 0 BLKPUSH // x ... x
+    31 PUSHINT // x ... x n=31
+    TUPLEVAR // t
+    15 0 BLKPUSH // t ... t
+    15 0 BLKPUSH // t ... t
+    31 PUSHINT // t ... t n=31
+    TUPLEVAR // t'
+    """;
 
 (tuple, ()) enqueue(tuple, [int, int, int, int, int, tuple]) asm
     """
@@ -102,22 +114,11 @@ int is_solved?(int sr, int sc) inline {
     }
 }
 
-() init_visited(int n, int m) impure inline {
-    tuple row = empty_tuple();
-    repeat m {
-        row~tpush(0xffffffffffff);
-    }
-    visited = empty_tuple();
-    repeat n {
-        visited~tpush(row);
-    }
-}
-
 int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
     int new_v = dist + (prob << 16) + (breaks << 32);
     int v = visited.at(pr).at(pc);
     if new_v < v {
-        visited = visited.setAt(pr, visited.at(pr).setAt(pc, new_v));
+        visited = visited.tset(pr, visited.at(pr).tset(pc, new_v));
         return true;
     }
     return false;
@@ -131,7 +132,7 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
         breaks += 1;
     }
     if append?(sr, sc, breaks, prob, dist) {
-        tuple new_maze = maze.setAt(sr, maze.at(sr).setAt(sc, "!"u));
+        tuple new_maze = maze.tset(sr, maze.at(sr).tset(sc, "!"u));
         if item == "."u {
             queue~enqueue([sr, sc, breaks, prob, dist, new_maze]);
         } elseif item == "?"u {
@@ -142,9 +143,7 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
     }
 }
 
-(int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
-    set_gas_limit(100000000);
-    ;; find start and end positions
+(int, int) find_start_and_end(int n, int m, tuple maze) impure inline {
     int sr = null();
     int sc = null();
     int i = 0;
@@ -154,25 +153,38 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
         repeat m {
             int item = row.at(j);
             if item == "S"u {
+                ifnot er.null?() {
+                    return ( i, j );
+                }
                 sr = i;
                 sc = j;
             }
             if item == "E"u {
                 er = i;
                 ec = j;
+                ifnot sr.null?() {
+                    return ( sr, sc );
+                }
             }
             j += 1;
         }
         i += 1;
     }
+    return ( sr, sc );
+}
 
-    init_visited(n, m);
+(int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
+    set_gas_limit(100000000);
+
+    visited = init_visited(0xffffffffffff);
     result_breaks = 0;
     result_prob = 0;
     result_dist = 0;
     queue = empty_tuple();
     squeue = empty_tuple();
     xqueue = empty_tuple();
+
+    ( int sr, int sc ) = find_start_and_end(n, m, maze);
     queue~enqueue([sr, sc, 0, 0, 0, maze]);
     append?(sr, sc, 0, 0, 0);
 
