@@ -29,9 +29,8 @@
     int addr = s~load_uint(256);
     int share = s~load_uint(32);
 
-    ( slice value, _ ) = users.udict_get?(256, addr);
-    total += share;
     users~udict_set_builder(256, addr, begin_cell().store_uint(share, 32));
+    total += share;
 
     save_data(total, users, admin_address);
 }
@@ -57,7 +56,7 @@
     throw_if(122, users.null?());
 
     builder b = begin_cell()
-        .store_uint(0x8400, 17); ;; 01000010000000000
+        .store_slice("42004_"s); ;; .store_uint(0x8400, 17) ;; 01000010000000000
 
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
@@ -81,13 +80,12 @@
     int amount = s~load_coins();
 
     builder b = begin_cell()
-        .store_uint(0x10, 6)
+        .store_slice("42_"s) ;; .store_uint(0x10, 6)
         .store_slice(src)
-        .store_coins(20000000)
-        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+        .store_slice("401312D00000000000000000000000000003_"s); ;; .store_coins(20000000) .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
 
     builder bb = begin_cell()
-        .store_uint(0x0f8a7ea5, 32)
+        .store_slice("0f8a7ea5"s) ;; .store_uint(0x0f8a7ea5, 32)
         .store_uint(query_id, 64);
 
     while ~ users.null?() {
@@ -128,11 +126,11 @@
         return remove_user(src, in_msg_body);
     }
 
-    if op == 0x068530b3 {
-        return split(msg_value);
+    if op == 0x7362d09c {
+        return notification(src, in_msg_body);
     }
 
-    return notification(src, in_msg_body);
+    return split(msg_value);
 }
 
 cell get_users() method_id {
