@@ -116,9 +116,10 @@ int is_solved?(int sr, int sc) inline {
 
 int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
     int new_v = dist + (prob << 16) + (breaks << 32);
-    int v = visited.at(pr).at(pc);
+    tuple row = visited.at(pr);
+    int v = row.at(pc);
     if new_v < v {
-        visited = visited.tset(pr, visited.at(pr).tset(pc, new_v));
+        visited = visited.tset(pr, row.tset(pc, new_v));
         return true;
     }
     return false;
