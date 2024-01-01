@@ -56,7 +56,7 @@
     throw_if(122, users.null?());
 
     builder b = begin_cell()
-        .store_slice("42004_"s); ;; .store_uint(0x8400, 17) ;; 01000010000000000
+        .store_uint(0x8400, 17); ;; 01000010000000000
 
     while ~ users.null?() {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
@@ -65,7 +65,7 @@
         cell msg = b
             .store_uint(addr, 256)
             .store_coins(x)
-            .store_slice("000000000000000000000000001_"s) ;; .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
         send_raw_message(msg, 1);
     }
@@ -80,12 +80,13 @@
     int amount = s~load_coins();
 
     builder b = begin_cell()
-        .store_slice("42_"s) ;; .store_uint(0x10, 6)
+        .store_uint(0x10, 6)
         .store_slice(src)
-        .store_slice("401312D00000000000000000000000000003_"s); ;; .store_coins(20000000) .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_coins(20000000)
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
 
     builder bb = begin_cell()
-        .store_slice("0f8a7ea5"s) ;; .store_uint(0x0f8a7ea5, 32)
+        .store_uint(0x0f8a7ea5, 32)
         .store_uint(query_id, 64);
 
     while ~ users.null?() {
@@ -94,11 +95,11 @@
         int x = muldiv(share, amount, total);
         cell transfer = bb
             .store_coins(x)
-            .store_slice("801_"s) ;; .store_uint(0x400, 11)
+            .store_uint(0x400, 11)
             .store_uint(addr, 256)
-            .store_slice("801_"s) ;; .store_uint(0x400, 11)
+            .store_uint(0x400, 11)
             .store_uint(addr, 256)
-            .store_slice("080a_"s) ;; .store_uint(0x202, 1 + 4 + 8 + 1) ;; 00001000000010
+            .store_uint(0x202, 1 + 4 + 8 + 1) ;; 00001000000010
             .end_cell();
         cell msg = b
             .store_ref(transfer)
