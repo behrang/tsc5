@@ -1,9 +1,9 @@
 #include "imports/stdlib.fc";
 
 global tuple visited;
-global tuple queue;
-global tuple squeue;
-global tuple xqueue;
+global [ int, int, tuple ] queue;
+global [ int, int, tuple ] squeue;
+global [ int, int, tuple ] xqueue;
 global int er;
 global int ec;
 global int result_breaks;
@@ -11,9 +11,8 @@ global int result_prob;
 global int result_dist;
 global tuple result_maze;
 
-int tlen(tuple) asm "TLEN";
-
-forall X -> tuple tset(tuple t, int k, X x) asm(t x k) "SETINDEXVAR";
+forall X -> X tget(tuple t, int k) asm "INDEXVARQ";
+forall X -> tuple tset(tuple t, int k, X x) asm(t x k) "SETINDEXVARQ";
 
 tuple init_visited(int x) asm
     """
@@ -27,51 +26,27 @@ tuple init_visited(int x) asm
     TUPLEVAR // t'
     """;
 
-(tuple, ()) enqueue(tuple, [int, int, int, int, int, tuple]) asm
-    """
-        SWAP // e pq
-        DUP // e pq pq
-        TLEN // e pq n
-        IFNOT:<{
-            NIL // e pq cq
-        }>ELSE<{
-            TPOP // e pq cq
-            DUP // e pq cq cq
-            TLEN // e pq cq n
-            255 PUSHINT // e pq cq n x=255
-            EQUAL // e pq cq f
-            IF:<{
-                TPUSH // e pq
-                NIL // e pq cq
-            }>
-        }>
-        ROT // pq cq e
-        TPUSH // pq cq
-        TPUSH // pq
-    """;
-(tuple, [int, int, int, int, int, tuple]) dequeue(tuple) asm
-    """
-        DUP // pq pq
-        FIRST // pq cq
-        DUP // pq cq cq
-        TLEN // pq cq n
-        EXPLODEVAR // pq e_1 ... e_n n
-        DEC // pq e_1 ... e_n n-1
-        DUP // pq e_1 ... e_n n-1 n-1
-        IF:<{
-            TUPLEVAR // pq e_1 cq
-            SWAP // pq cq e_1
-            -ROT // e_1 pq cq
-            SETFIRST // e_1 pq
-            SWAP // pq e_1
-        }>ELSE<{
-            DROP // pq e_1
-            SWAP // e_1 pq
-            TPOP // e_1 pq cq
-            DROP // e_1 pq
-            SWAP // pq e_1
-        }>
-    """;
+([ int, int, tuple ], ()) queue_push([ int, int, tuple ] q, [ int, int, int, int, int, tuple ] e) inline {
+    if q.null?() {
+        return ( [ 0, 1, empty_tuple().tset(0, empty_tuple().tset(0, e)) ], () );
+    }
+    ( int head, int tail, tuple storage ) = untriple(q);
+    ( int x, int y ) = divmod(tail, 28);
+    storage = storage.tset(x, storage.tget(x).tset(y, e) );
+    return ( [ head, tail + 1, storage ], () );
+}
+
+([ int, int, tuple ], [ int, int, int, int, int, tuple ]) queue_next([ int, int, tuple ] q) inline {
+    ( int head, int tail, tuple storage ) = untriple(q);
+    ( int x, int y ) = divmod(head, 28);
+    var e = storage.tget(x).tget(y);
+    head += 1;
+    if head == tail {
+        return ( null(), e );
+    } else {
+        return ( [ head, tail, storage ], e );
+    }
+}
 
 int is_solved?(int sr, int sc) inline {
     if sc < ec - 1 {
@@ -135,11 +110,11 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
     if append?(sr, sc, breaks, prob, dist) {
         tuple new_maze = maze.tset(sr, maze.at(sr).tset(sc, "!"u));
         if item == "."u {
-            queue~enqueue([sr, sc, breaks, prob, dist, new_maze]);
+            queue~queue_push([sr, sc, breaks, prob, dist, new_maze]);
         } elseif item == "?"u {
-            squeue~enqueue([sr, sc, breaks, prob, dist, new_maze]);
+            squeue~queue_push([sr, sc, breaks, prob, dist, new_maze]);
         } else {
-            xqueue~enqueue([sr, sc, breaks, prob, dist, new_maze]);
+            xqueue~queue_push([sr, sc, breaks, prob, dist, new_maze]);
         }
     }
 }
@@ -181,23 +156,20 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
     result_breaks = 0;
     result_prob = 0;
     result_dist = 0;
-    queue = empty_tuple();
-    squeue = empty_tuple();
-    xqueue = empty_tuple();
 
     ( int sr, int sc ) = find_start_and_end(n, m, maze);
-    queue~enqueue([sr, sc, 0, 0, 0, maze]);
+    queue~queue_push([sr, sc, 0, 0, 0, maze]);
     append?(sr, sc, 0, 0, 0);
 
     int done? = false;
     do {
-        if queue.tlen() {
-            [ sr, sc, int breaks, int prob, int dist, maze ] = queue~dequeue();
+        ifnot queue.null?() {
+            [ sr, sc, int breaks, int prob, int dist, maze ] = queue~queue_next();
             dist += 1;
 
             if is_solved?(sr, sc) {
                 choose_best(breaks, prob, dist, maze);
-                queue = empty_tuple();
+                queue = null();
             } else {
                 ;; append neighbors
 
@@ -243,19 +215,19 @@ int append?(int pr, int pc, int breaks, int prob, int dist) impure inline {
                     add_to_queue(tr, tc, breaks, prob, dist, maze); ;; R
                 }
             }
-        } elseif squeue.tlen() {
-            [ int tsr, int tsc, int tb, int tp, int td, tuple tz ] = squeue~dequeue();
+        } elseifnot squeue.null?() {
+            [ int tsr, int tsc, int tb, int tp, int td, tuple tz ] = squeue~queue_next();
             if result_dist & (result_prob < tp) {
-                squeue = empty_tuple();
+                squeue = null();
             } else {
-                queue~enqueue([ tsr, tsc, tb, tp, td, tz ]);
+                queue~queue_push([ tsr, tsc, tb, tp, td, tz ]);
             }
-        } elseif xqueue.tlen() {
-            [ int tsr, int tsc, int tb, int tp, int td, tuple tz ] = xqueue~dequeue();
+        } elseifnot xqueue.null?() {
+            [ int tsr, int tsc, int tb, int tp, int td, tuple tz ] = xqueue~queue_next();
             if result_dist & (result_breaks < tb) {
-                xqueue = empty_tuple();
+                xqueue = null();
             } else {
-                queue~enqueue([ tsr, tsc, tb, tp, td, tz ]);
+                queue~queue_push([ tsr, tsc, tb, tp, td, tz ]);
             }
         } else {
             done? = true;
