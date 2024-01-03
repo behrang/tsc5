@@ -27,10 +27,10 @@
 
     s~skip_bits(64 + 11);
     int addr = s~load_uint(256);
-    int share = s~load_uint(32);
+    int share = s.preload_uint(32);
 
-    users~udict_set_builder(256, addr, begin_cell().store_uint(share, 32));
     total += share;
+    users~udict_set(256, addr, s);
 
     save_data(total, users, admin_address);
 }
@@ -58,7 +58,7 @@
     builder b = begin_cell()
         .store_uint(0x8400, 17); ;; 01000010000000000
 
-    while ~ users.null?() {
+    do {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
         int x = muldiv(share, amount, total);
@@ -68,7 +68,7 @@
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
         send_raw_message(msg, 1);
-    }
+    } until users.null?();
 }
 
 () notification(slice src, slice s) impure inline {
@@ -89,7 +89,7 @@
         .store_uint(0x0f8a7ea5, 32)
         .store_uint(query_id, 64);
 
-    while ~ users.null?() {
+    do {
         ( int addr, slice value, _ ) = users~udict::delete_get_min(256);
         int share = value~load_uint(32);
         int x = muldiv(share, amount, total);
@@ -105,7 +105,7 @@
             .store_ref(transfer)
             .end_cell();
         send_raw_message(msg, 1);
-    }
+    } until users.null?();
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
