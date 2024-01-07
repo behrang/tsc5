@@ -1,3 +1,7 @@
+![Result](./result.png)
+
+![Rank](./rank.png)
+
 # 🏆 Welcome to TON Smart Challenge #5
 
 ### by [TON Foundation](https://ton.org/) & [Codeforces](https://codeforces.com/)
